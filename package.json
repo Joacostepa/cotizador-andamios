@@ -1,0 +1,11 @@
+{
+  "name": "cotizador-andamios",
+  "version": "1.0.0",
+  "scripts": {
+    "deploy": "firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.0.0"
+  }
+}
+
