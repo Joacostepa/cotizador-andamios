@@ -297,7 +297,12 @@
     </footer>
   </div>
 
-  <script type="module" src="./js/app.js"></script>
+  <!-- Firebase compat (sin módulos ES6) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  
+  <!-- App bundle consolidado -->
+  <script src="./js/bundle.js"></script>
 </body>
 </html>
 

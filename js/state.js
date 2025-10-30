@@ -35,12 +35,24 @@ export function isFirestoreEnabled() { return !!_db; }
 
 export async function initBackend() {
   try {
-    const cfg = await import('../config/firebase.js');
-    const appMod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-    const fsMod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
-    const app = appMod.initializeApp(cfg.firebaseConfig);
-    _db = fsMod.getFirestore(app);
-    _fb = fsMod;
+    if (!window.firebase) { _db = null; _fb = null; return; }
+    const firebaseConfig = {
+      apiKey: "AIzaSyAKPX1KkUrriULooGwdi3L2g6zBO43TFfw",
+      authDomain: "cotizador-andamios.firebaseapp.com",
+      projectId: "cotizador-andamios",
+      storageBucket: "cotizador-andamios.firebasestorage.app",
+      messagingSenderId: "53924047263",
+      appId: "1:53924047263:web:7ef9b15e99ac00dbc4f5aa"
+    };
+    const app = firebase.initializeApp(firebaseConfig);
+    _db = firebase.firestore();
+    _fb = {
+      doc: (db, col, id) => db.collection(col).doc(id),
+      setDoc: (ref, data, opts) => ref.set(data, opts),
+      collection: (db, col) => db.collection(col),
+      getDocs: (ref) => ref.get(),
+      getDoc: (ref) => ref.get()
+    };
   } catch (e) {
     _db = null; _fb = null;
   }
@@ -57,7 +69,10 @@ export async function loadCollectionFromFirestore(collection) {
   const { collection: coll, getDocs } = _fb;
   const snap = await getDocs(coll(_db, collection));
   const arr = [];
-  snap.forEach(d=> arr.push({ id: d.id, ...d.data() }));
+  snap.forEach(d=> {
+    const data = d.data();
+    arr.push({ id: d.id, ...data });
+  });
   return arr;
 }
 
