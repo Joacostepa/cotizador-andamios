@@ -36,37 +36,41 @@ async function initBackend() {
     };
     const app = firebase.initializeApp(firebaseConfig);
     _db = firebase.firestore();
-    _fb = {
-      doc: (db, col, id) => db.collection(col).doc(id),
-      setDoc: (ref, data, opts) => ref.set(data, opts),
-      collection: (db, col) => db.collection(col),
-      getDocs: (ref) => ref.get(),
-      getDoc: (ref) => ref.get()
-    };
+    _fb = null;
   } catch (e) { _db = null; _fb = null; }
 }
 
 async function saveToFirestore(collection, docId, payload) {
   if (!_db) return;
-  const { doc, setDoc } = _fb;
-  await setDoc(doc(_db, collection, docId), payload, { merge: true });
+  try {
+    await _db.collection(collection).doc(docId).set(payload, { merge: true });
+  } catch (e) {
+    console.error('Error guardando en Firestore:', e);
+  }
 }
 
 async function loadCollectionFromFirestore(collection) {
   if (!_db) return [];
-  const { collection: coll, getDocs } = _fb;
-  const snap = await getDocs(coll(_db, collection));
-  const arr = [];
-  snap.forEach(d=> { const data = d.data(); arr.push({ id: d.id, ...data }); });
-  return arr;
+  try {
+    const snap = await _db.collection(collection).get();
+    const arr = [];
+    snap.forEach(d=> { const data = d.data(); arr.push({ id: d.id, ...data }); });
+    return arr;
+  } catch (e) {
+    console.error('Error cargando colección:', e);
+    return [];
+  }
 }
 
 async function loadDocFromFirestore(collection, docId) {
   if (!_db) return null;
-  const { doc, getDoc } = _fb;
-  const ref = doc(_db, collection, docId);
-  const snap = await getDoc(ref);
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  try {
+    const snap = await _db.collection(collection).doc(docId).get();
+    return snap.exists ? { id: snap.id, ...snap.data() } : null;
+  } catch (e) {
+    console.error('Error cargando doc:', e);
+    return null;
+  }
 }
 
 async function loadAllFromFirestore() {
@@ -648,6 +652,7 @@ function renderCotizaciones() {
     arr = arr.filter(c =>
       String(c.numero).includes(q) ||
       (c.cliente||'').toLowerCase().includes(q) ||
+      (c.cliente||'').toLowerCase().includes(q) ||
       (c.locacion||'').toLowerCase().includes(q)
     );
   }
@@ -804,17 +809,16 @@ function setupEvents() {
 }
 
 function hydrateSettingsUI() {
-  document.getElementById('set-iva').value = String(state.settings.ivaPct);
-  document.getElementById('set-incluye-iva').checked = !!state.settings.preciosIncluyenIVA;
-  document.getElementById('set-redondeo').checked = !!state.settings.redondeoVisual;
-  document.getElementById('set-validez-def').value = String(state.settings.validezDefaultDays);
+  document.getElementById('set-iva')?.value = String(state.settings.ivaPct);
+  document.getElementById('set-redondeo')?.checked = !!state.settings.redondeoVisual;
+  document.getElementById('set-validez-def')?.value = String(state.settings.validezDefaultDays);
   const sm = document.getElementById('set-minimo'); if (sm) sm.value = String(state.settings.importeMinimo||0);
-  document.getElementById('set-politica').value = state.settings.politicaTarifa;
-  document.getElementById('set-empresa').value = state.settings.empresa.nombre || '';
-  document.getElementById('set-cuit').value = state.settings.empresa.cuit || '';
-  document.getElementById('set-direccion').value = state.settings.empresa.direccion || '';
-  document.getElementById('set-pie').value = state.settings.empresa.piePDF || '';
-  document.getElementById('set-wa').value = state.settings.textoWhatsApp || '';
+  document.getElementById('set-politica')?.value = state.settings.politicaTarifa;
+  document.getElementById('set-empresa')?.value = state.settings.empresa.nombre || '';
+  document.getElementById('set-cuit')?.value = state.settings.empresa.cuit || '';
+  document.getElementById('set-direccion')?.value = state.settings.empresa.direccion || '';
+  document.getElementById('set-pie')?.value = state.settings.empresa.piePDF || '';
+  document.getElementById('set-wa')?.value = state.settings.textoWhatsApp || '';
   const sv = document.getElementById('set-vendedores'); if (sv) sv.value = (state.settings.vendedores||[]).join(', ');
 }
 
