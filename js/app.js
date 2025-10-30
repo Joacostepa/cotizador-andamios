@@ -159,7 +159,7 @@ function updateResumen() {
   if (top) top.textContent = `Total actual: ${formatARS(tot.totalFinal, true)}`;
 }
 
-function guardarCotizacion() {
+async function guardarCotizacion() {
   const now = new Date();
   const numero = (state.seq.cotizacion++);
   const dias = state.cotizar.dias || 10;
