@@ -585,6 +585,7 @@ function renderProductos() {
 }
 
 function onProductoChange(e) {
+  e.stopPropagation();
   const idx = Number(e.currentTarget.getAttribute('data-idx'));
   const key = e.currentTarget.getAttribute('data-key');
   const act = e.currentTarget.getAttribute('data-act');
@@ -592,15 +593,21 @@ function onProductoChange(e) {
     const p = state.productos[idx];
     if (!p) return;
     if (key==='destacado') p.destacado = e.currentTarget.checked;
-    else if (key.startsWith('precio') || key==='peso') p[key] = parseNumber(e.currentTarget.value) || 0; else p[key] = e.currentTarget.value;
-    saveToFirestore('productos', p.codigo, p);
-    renderProductos();
+    else if (key.startsWith('precio') || key==='peso') p[key] = parseNumber(e.currentTarget.value) || 0;
+    else p[key] = e.currentTarget.value;
+    // Solo actualizar estado, NO guardar ni re-renderizar
   }
   if (act==='p-del') {
     const p = state.productos.splice(idx,1)[0];
     if (p) saveToFirestore('productos', p.codigo, { __deleted: true });
     renderProductos();
   }
+}
+
+async function guardarTodosProductos() {
+  const ops = state.productos.map(p => saveToFirestore('productos', p.codigo, p));
+  await Promise.all(ops);
+  alert('Productos guardados correctamente');
 }
 
 function renderFletes() {
@@ -624,16 +631,16 @@ function renderFletes() {
 }
 
 function onFleteChange(e) {
+  e.stopPropagation();
   const idx = Number(e.currentTarget.getAttribute('data-idx'));
   const key = e.currentTarget.getAttribute('data-key');
   const act = e.currentTarget.getAttribute('data-act');
   if (!Number.isNaN(idx) && key) {
     const f = state.fletes[idx];
     if (!f) return;
-    if (key==='precio') f[key] = parseNumber(e.currentTarget.value) || 0; else f[key] = e.currentTarget.value;
-    saveToFirestore('fletes', f.locacion, f);
-    renderFletes();
-    populateDatalistLocaciones();
+    if (key==='precio') f[key] = parseNumber(e.currentTarget.value) || 0;
+    else f[key] = e.currentTarget.value;
+    // Solo actualizar estado, NO guardar ni re-renderizar
   }
   if (act==='f-del') {
     const f = state.fletes.splice(idx,1)[0];
@@ -641,6 +648,18 @@ function onFleteChange(e) {
     renderFletes();
     populateDatalistLocaciones();
   }
+}
+
+async function guardarTodosFletes() {
+  const ops = state.fletes.map(f => saveToFirestore('fletes', f.locacion, f));
+  await Promise.all(ops);
+  populateDatalistLocaciones();
+  alert('Fletes guardados correctamente');
+}
+
+async function guardarConfiguracion() {
+  await saveToFirestore('settings', 'general', state.settings);
+  alert('Configuración guardada correctamente');
 }
 
 function renderCotizaciones() {
@@ -749,6 +768,7 @@ function setupEvents() {
   document.getElementById('btn-whatsapp').addEventListener('click', compartirWhatsAppActual);
 
   document.getElementById('p-buscar').addEventListener('input', renderProductos);
+  document.getElementById('p-guardar').addEventListener('click', guardarTodosProductos);
   document.getElementById('p-add').addEventListener('click', async ()=>{
     const p = { codigo: `P${Date.now()%100000}`, nombre: 'Nuevo producto', precio_10: 0, precio_20: 0, precio_30: 0 };
     state.productos.push(p);
@@ -767,6 +787,7 @@ function setupEvents() {
   document.getElementById('p-export-csv').addEventListener('click', ()=> exportCSV(state.productos, 'productos.csv'));
 
   document.getElementById('f-buscar').addEventListener('input', renderFletes);
+  document.getElementById('f-guardar').addEventListener('click', guardarTodosFletes);
   document.getElementById('f-add').addEventListener('click', async ()=>{
     const f = { locacion: 'Nueva locación', precio: 0 };
     state.fletes.push(f);
@@ -788,23 +809,24 @@ function setupEvents() {
   document.getElementById('c-buscar').addEventListener('input', renderCotizaciones);
   document.getElementById('c-orden').addEventListener('change', renderCotizaciones);
 
-  // Config
-  document.getElementById('set-iva').addEventListener('change', async (e)=>{ state.settings.ivaPct = parseNumber(e.target.value)||0; await saveToFirestore('settings','general', state.settings); updateResumen(); });
-  document.getElementById('set-redondeo').addEventListener('change', async (e)=>{ state.settings.redondeoVisual = e.target.checked; await saveToFirestore('settings','general', state.settings); updateResumen(); renderCotizaciones(); });
-  document.getElementById('set-validez-def').addEventListener('change', async (e)=>{ state.settings.validezDefaultDays = parseNumber(e.target.value)||7; await saveToFirestore('settings','general', state.settings); });
-  const setMin = document.getElementById('set-minimo'); if (setMin) setMin.addEventListener('change', async (e)=>{ state.settings.importeMinimo = parseNumber(e.target.value)||0; await saveToFirestore('settings','general', state.settings); updateResumen(); });
-  document.getElementById('set-politica').addEventListener('change', async (e)=>{ state.settings.politicaTarifa = e.target.value; await saveToFirestore('settings','general', state.settings); updateResumen(); });
-  document.getElementById('set-empresa').addEventListener('change', async (e)=>{ state.settings.empresa.nombre = e.target.value; await saveToFirestore('settings','general', state.settings); });
-  document.getElementById('set-cuit').addEventListener('change', async (e)=>{ state.settings.empresa.cuit = e.target.value; await saveToFirestore('settings','general', state.settings); });
-  document.getElementById('set-direccion').addEventListener('change', async (e)=>{ state.settings.empresa.direccion = e.target.value; await saveToFirestore('settings','general', state.settings); });
-  document.getElementById('set-pie').addEventListener('change', async (e)=>{ state.settings.empresa.piePDF = e.target.value; await saveToFirestore('settings','general', state.settings); });
-  document.getElementById('set-wa').addEventListener('change', async (e)=>{ state.settings.textoWhatsApp = e.target.value; await saveToFirestore('settings','general', state.settings); });
-  const setVend = document.getElementById('set-vendedores'); if (setVend) setVend.addEventListener('change', async (e)=>{ state.settings.vendedores = String(e.target.value||'').split(',').map(s=>s.trim()).filter(Boolean); await saveToFirestore('settings','general', state.settings); renderCotizar(); });
+  // Config - Solo actualizar estado local, NO guardar automáticamente
+  document.getElementById('set-iva').addEventListener('change', (e)=>{ state.settings.ivaPct = parseNumber(e.target.value)||0; updateResumen(); });
+  document.getElementById('set-redondeo').addEventListener('change', (e)=>{ state.settings.redondeoVisual = e.target.checked; updateResumen(); renderCotizaciones(); });
+  document.getElementById('set-validez-def').addEventListener('change', (e)=>{ state.settings.validezDefaultDays = parseNumber(e.target.value)||7; });
+  const setMin = document.getElementById('set-minimo'); if (setMin) setMin.addEventListener('change', (e)=>{ state.settings.importeMinimo = parseNumber(e.target.value)||0; updateResumen(); });
+  document.getElementById('set-politica').addEventListener('change', (e)=>{ state.settings.politicaTarifa = e.target.value; updateResumen(); });
+  document.getElementById('set-empresa').addEventListener('change', (e)=>{ state.settings.empresa.nombre = e.target.value; });
+  document.getElementById('set-cuit').addEventListener('change', (e)=>{ state.settings.empresa.cuit = e.target.value; });
+  document.getElementById('set-direccion').addEventListener('change', (e)=>{ state.settings.empresa.direccion = e.target.value; });
+  document.getElementById('set-pie').addEventListener('change', (e)=>{ state.settings.empresa.piePDF = e.target.value; });
+  document.getElementById('set-wa').addEventListener('change', (e)=>{ state.settings.textoWhatsApp = e.target.value; });
+  const setVend = document.getElementById('set-vendedores'); if (setVend) setVend.addEventListener('change', (e)=>{ state.settings.vendedores = String(e.target.value||'').split(',').map(s=>s.trim()).filter(Boolean); renderCotizar(); });
+  document.getElementById('config-guardar').addEventListener('click', guardarConfiguracion);
   document.getElementById('set-logo').addEventListener('change', async (e)=>{
     const f = e.target.files[0]; if (!f) return;
     const b64 = await new Promise((resolve)=>{ const r=new FileReader(); r.onload=()=>resolve(String(r.result)); r.readAsDataURL(f); });
     state.settings.empresa.logoBase64 = b64;
-    saveAll();
+    await guardarConfiguracion();
   });
 }
 

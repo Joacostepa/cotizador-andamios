@@ -157,6 +157,7 @@
           <div class="flex flex-wrap gap-2 items-center">
             <input id="p-buscar" type="text" placeholder="Buscar por código o nombre" class="flex-1 border rounded px-3 py-2">
             <button id="p-add" class="px-3 py-2 bg-brand text-white rounded">Nuevo</button>
+            <button id="p-guardar" class="px-3 py-2 bg-green-600 text-white rounded">Guardar cambios</button>
             <input id="p-file" type="file" accept=".csv,.json" class="hidden">
             <button id="p-import" class="px-3 py-2 border rounded">Importar</button>
             <button id="p-export-json" class="px-3 py-2 border rounded">Exportar JSON</button>
@@ -189,6 +190,7 @@
           <div class="flex flex-wrap gap-2 items-center">
             <input id="f-buscar" type="text" placeholder="Buscar por locación" class="flex-1 border rounded px-3 py-2">
             <button id="f-add" class="px-3 py-2 bg-brand text-white rounded">Nuevo</button>
+            <button id="f-guardar" class="px-3 py-2 bg-green-600 text-white rounded">Guardar cambios</button>
             <input id="f-file" type="file" accept=".csv,.json" class="hidden">
             <button id="f-import" class="px-3 py-2 border rounded">Importar</button>
             <button id="f-export-json" class="px-3 py-2 border rounded">Exportar JSON</button>
@@ -249,6 +251,9 @@
 
       <!-- Tab: Configuración -->
       <section id="tab-config" class="tab hidden">
+        <div class="mb-3 flex justify-end">
+          <button id="config-guardar" class="px-4 py-2 bg-green-600 text-white rounded">Guardar configuración</button>
+        </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div class="bg-white border border-slate-200 rounded p-4 space-y-3">
             <h3 class="font-semibold">Fiscal</h3>
