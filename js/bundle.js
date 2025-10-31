@@ -369,14 +369,44 @@ function importJSONOrCSV(text, tipo) {
     if (tipo==='productos') return { productos: sanitizeProductos(obj) };
     if (tipo==='fletes') return { fletes: sanitizeFletes(obj) };
   } catch {
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const headers = lines.shift().split(',').map(h => h.replace(/^"|"$/g,''));
-    const data = lines.map(l => {
-      const cols = l.match(/\"([^\"]*)\"|([^,]+)/g)?.map(x=>x.replace(/^"|"$/g,'')) || [];
-      const obj = {}; headers.forEach((h,i)=> obj[h] = cols[i]); return obj;
-    });
-    if (tipo==='productos') return { productos: sanitizeProductos(data) };
-    if (tipo==='fletes') return { fletes: sanitizeFletes(data) };
+    // CSV Parser tolerante: maneja encabezados variados y CSV sin encabezados
+    const raw = text.replace(/\uFEFF/g,'').trim();
+    if (!raw) return {};
+    const lines = raw.split(/\r?\n/).filter(Boolean);
+    if (!lines.length) return {};
+    const splitRow = (row)=> row.match(/\"([^\"]*)\"|([^,]+)/g)?.map(x=>x.replace(/^"|"$/g,'')) || [];
+    const firstCols = splitRow(lines[0]);
+
+    // Normalizar encabezados si existen
+    const isHeaderLikely = firstCols.some(c => /loca|preci|valor|monto|nombre|codigo/i.test(c));
+    let dataObjs = [];
+    if (isHeaderLikely) {
+      const headerMap = firstCols.map(h => String(h||'').trim().toLowerCase());
+      const mapKey = (h)=>{
+        if (/^loc/.test(h) || /localidad|zona|lugar/.test(h)) return 'locacion';
+        if (/^prec/.test(h) || /valor|monto|importe/.test(h)) return 'precio';
+        if (/^cod/.test(h)) return 'codigo';
+        if (/^nom/.test(h)) return 'nombre';
+        if (/^p10|10/.test(h)) return 'precio_10';
+        if (/^p20|20/.test(h)) return 'precio_20';
+        if (/^p30|30/.test(h)) return 'precio_30';
+        return h;
+      };
+      const normHeaders = headerMap.map(mapKey);
+      for (let i=1;i<lines.length;i++) {
+        const cols = splitRow(lines[i]);
+        const obj = {}; normHeaders.forEach((h,idx)=> obj[h] = cols[idx]);
+        dataObjs.push(obj);
+      }
+    } else {
+      // CSV sin encabezado: asumir 2 columnas para fletes [locacion, precio]
+      for (let i=0;i<lines.length;i++) {
+        const cols = splitRow(lines[i]);
+        if (cols.length>=2) dataObjs.push({ locacion: cols[0], precio: cols[1] });
+      }
+    }
+    if (tipo==='productos') return { productos: sanitizeProductos(dataObjs) };
+    if (tipo==='fletes') return { fletes: sanitizeFletes(dataObjs) };
   }
   return {};
 }
