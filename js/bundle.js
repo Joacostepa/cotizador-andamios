@@ -86,6 +86,13 @@ async function loadCollectionFromFirestore(collection) {
           raw: data
         });
       }
+      if (collection === 'vendedores') {
+        console.log(`[loadCollectionFromFirestore] Vendedor ${d.id}:`, {
+          id: d.id,
+          nombre: data.nombre,
+          raw: data
+        });
+      }
       arr.push({ id: d.id, ...data }); 
     });
     console.log(`[loadCollectionFromFirestore] ${collection}: ${arr.length} documentos cargados`);
@@ -217,10 +224,18 @@ async function ensureSeedDataInFirestore() {
   }
 
   // Vendedores semilla (si colección vacía)
+  console.log('[SEED] Vendedores en Firestore:', vendedoresSnapshot.size, '(empty:', vendedoresSnapshot.empty, ')');
+  console.log('[SEED] Vendedores en state:', (state.vendedores||[]).length);
   if (vendedoresSnapshot.empty && (state.vendedores||[]).length===0) {
     const vend = state.settings.vendedores?.length ? state.settings.vendedores : ['Tamara','Sandra','Agustina','Rocio'];
     console.log('[SEED] ✅ Agregando vendedores semilla:', vend);
     await Promise.all(vend.map(nombre => saveToFirestore('vendedores', nombre, { nombre })));
+    // Recargar vendedores después de agregarlos
+    const nuevosVendedores = await loadCollectionFromFirestore('vendedores');
+    state.vendedores = nuevosVendedores.map(v => v.nombre || v.id || '').filter(Boolean).sort((a,b)=> a.localeCompare(b));
+    console.log('[SEED] Vendedores actualizados en state:', state.vendedores);
+  } else {
+    console.log('[SEED] ❌ NO se agregan vendedores semilla - colección no vacía o state tiene vendedores');
   }
   
   if (ops.length) {
