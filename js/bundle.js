@@ -1,6 +1,7 @@
 // State
 const state = {
   productos: [], fletes: [], cotizaciones: [],
+  vendedores: [],
   cotizar: { items: [], dias: 10, aplicarIVA: false },
   seq: { cotizacion: 1 },
   settings: {
@@ -112,9 +113,12 @@ async function loadAllFromFirestore() {
     return false;
   }
   console.log('[LOAD] Iniciando carga de datos desde Firestore...');
-  const [productos, fletes, cotizaciones, settingsDoc, seqDoc] = await Promise.all([
-    loadCollectionFromFirestore('productos'), loadCollectionFromFirestore('fletes'),
-    loadCollectionFromFirestore('cotizaciones'), loadDocFromFirestore('settings','general'),
+  const [productos, fletes, cotizaciones, vendedores, settingsDoc, seqDoc] = await Promise.all([
+    loadCollectionFromFirestore('productos'),
+    loadCollectionFromFirestore('fletes'),
+    loadCollectionFromFirestore('cotizaciones'),
+    loadCollectionFromFirestore('vendedores'),
+    loadDocFromFirestore('settings','general'),
     loadDocFromFirestore('seq','counters')
   ]);
   console.log('[LOAD] Productos cargados desde Firestore:', productos.length);
@@ -147,6 +151,11 @@ async function loadAllFromFirestore() {
     });
   });
   state.cotizaciones = cotizaciones.map(c=> ({ ...c }));
+  // Vendedores (colección simple con campo "nombre")
+  state.vendedores = (vendedores||[])
+    .map(v => v.nombre || v.id || '')
+    .filter(Boolean)
+    .sort((a,b)=> a.localeCompare(b));
   if (settingsDoc) state.settings = { ...state.settings, ...settingsDoc };
   if (seqDoc) state.seq = { ...state.seq, ...seqDoc };
   console.log('[LOAD] Carga completada. Productos en state:', state.productos.length);
@@ -163,6 +172,7 @@ async function ensureSeedDataInFirestore() {
   // NO agregar si el usuario ha eliminado productos
   const productosSnapshot = await _db.collection('productos').get();
   const fletesSnapshot = await _db.collection('fletes').get();
+  const vendedoresSnapshot = await _db.collection('vendedores').get();
   
   console.log('[SEED] Productos en Firestore:', productosSnapshot.size, '(empty:', productosSnapshot.empty, ')');
   console.log('[SEED] Productos en state:', (state.productos||[]).length);
@@ -197,6 +207,13 @@ async function ensureSeedDataInFirestore() {
     ops.push(...seedF.map(f=> saveToFirestore('fletes', f.locacion, f)));
   } else {
     console.log('[SEED] ❌ NO se agregan fletes semilla - colección no vacía o state tiene fletes');
+  }
+
+  // Vendedores semilla (si colección vacía)
+  if (vendedoresSnapshot.empty && (state.vendedores||[]).length===0) {
+    const vend = state.settings.vendedores?.length ? state.settings.vendedores : ['Tamara','Sandra','Agustina','Rocio'];
+    console.log('[SEED] ✅ Agregando vendedores semilla:', vend);
+    await Promise.all(vend.map(nombre => saveToFirestore('vendedores', nombre, { nombre })));
   }
   
   if (ops.length) {
@@ -478,7 +495,8 @@ function renderCotizar() {
   const vv = document.getElementById('q-validez-view'); if (vv) vv.textContent = `${state.settings.validezDefaultDays} días`;
   // Vendedores
   const sel = document.getElementById('q-vendedor');
-  if (sel) sel.innerHTML = (state.settings.vendedores||['-']).map(v=>`<option value="${v}">${v}</option>`).join('');
+  if (sel) sel.innerHTML = (state.vendedores?.length ? state.vendedores : (state.settings.vendedores||['-']))
+    .map(v=>`<option value="${v}">${v}</option>`).join('');
   // Botones de días
   highlightDiasButtons();
   // Prefill destacados si vacío
