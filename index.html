@@ -48,7 +48,7 @@
 
     <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
       <!-- Tab: Cotizar -->
-      <section id="tab-cotizar" class="tab hidden">
+      <section id="tab-cotizar" class="tab">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="lg:col-span-2 space-y-6">
             <!-- Paso 1: Seleccionar Productos -->
@@ -92,29 +92,45 @@
               </div>
             </div>
 
-            <!-- Paso 3: Datos del Cliente -->
+            <!-- Paso 3: Información de Entrega -->
             <div class="bg-white border-2 border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
               <h2 class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-3 flex items-center gap-2">
                 <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">3</span>
+                Información de Entrega
+              </h2>
+              <div class="space-y-4">
+                <div class="flex items-center gap-4">
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input id="q-flete-si" type="radio" name="flete" value="si" checked class="w-5 h-5 text-blue-600 focus:ring-blue-500 border-slate-300">
+                    <span class="text-slate-700 font-medium">Sí</span>
+                  </label>
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input id="q-flete-no" type="radio" name="flete" value="no" class="w-5 h-5 text-blue-600 focus:ring-blue-500 border-slate-300">
+                    <span class="text-slate-700 font-medium">No</span>
+                  </label>
+                </div>
+                <div id="q-flete-container" class="space-y-2">
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Locación de entrega</label>
+                  <input id="q-locacion" list="locaciones-list" class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                  <datalist id="locaciones-list"></datalist>
+                </div>
+              </div>
+            </div>
+
+            <!-- Paso 4: Datos del Cliente -->
+            <div class="bg-white border-2 border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
+              <h2 class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-3 flex items-center gap-2">
+                <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">4</span>
                 Datos del Cliente
               </h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Cliente</label>
-                  <input id="q-cliente" type="text" class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre <span class="text-red-500">*</span></label>
+                  <input id="q-cliente" type="text" required class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Locación</label>
-                  <input id="q-locacion" list="locaciones-list" class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                  <datalist id="locaciones-list"></datalist>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Fecha de emisión</label>
-                  <div id="q-emision" class="border-2 border-slate-300 rounded-lg px-4 py-2.5 bg-slate-50 text-slate-700 font-medium"></div>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Validez</label>
-                  <div id="q-validez-view" class="border-2 border-slate-300 rounded-lg px-4 py-2.5 bg-slate-50 text-slate-700 font-medium"></div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1.5">Teléfono</label>
+                  <input id="q-telefono" type="tel" class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                 </div>
                 <div class="md:col-span-2">
                   <label class="block text-sm font-medium text-slate-700 mb-1.5">Vendedor</label>
@@ -128,10 +144,20 @@
               <label class="block text-sm font-medium text-slate-700 mb-2">Notas adicionales</label>
               <textarea id="q-notas" placeholder="Observaciones, condiciones especiales, etc." class="w-full border-2 border-slate-300 rounded-lg px-4 py-3 h-32 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"></textarea>
             </div>
+
+            <!-- Acciones -->
+            <div class="bg-white border-2 border-slate-200 rounded-xl shadow-sm p-6 space-y-3">
+              <h2 class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-3">Acciones</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button id="btn-guardar" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium shadow-md hover:shadow-lg">💾 Guardar cotización</button>
+                <button id="btn-pdf" class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-md hover:shadow-lg">📄 Exportar PDF</button>
+                <button id="btn-whatsapp" class="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium shadow-md hover:shadow-lg">💬 Compartir WhatsApp</button>
+              </div>
+            </div>
           </div>
 
-          <!-- Resumen y Acciones -->
-          <aside class="space-y-6">
+          <!-- Resumen -->
+          <aside class="lg:col-span-1">
             <div class="bg-white border-2 border-slate-200 rounded-xl shadow-sm p-6 space-y-4 sticky top-6">
               <h2 class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-3">Resumen</h2>
               <div class="space-y-3">
@@ -169,13 +195,6 @@
                 </div>
               </div>
             </div>
-
-            <div class="bg-white border-2 border-slate-200 rounded-xl shadow-sm p-6 space-y-3">
-              <h2 class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-3">Acciones</h2>
-              <button id="btn-guardar" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium shadow-md hover:shadow-lg">💾 Guardar cotización</button>
-              <button id="btn-pdf" class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-md hover:shadow-lg">📄 Exportar PDF</button>
-              <button id="btn-whatsapp" class="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium shadow-md hover:shadow-lg">💬 Compartir WhatsApp</button>
-            </div>
           </aside>
         </div>
       </section>
@@ -185,7 +204,7 @@
         <div class="bg-white border-2 border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
           <div class="flex flex-wrap gap-2 items-center">
             <input id="p-buscar" type="text" placeholder="Buscar por código o nombre" class="flex-1 border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-            <button id="p-add" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-md">Nuevo</button>
+            <button id="p-add" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-md">Agregar Producto</button>
             <button id="p-guardar" class="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium shadow-md">Guardar cambios</button>
             <input id="p-file" type="file" accept=".csv,.json" class="hidden">
             <button id="p-import" class="px-4 py-2.5 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium">Importar</button>
@@ -343,6 +362,56 @@
     <footer class="border-t-2 border-slate-200 text-sm text-slate-500 px-4 py-4 bg-white">
       <div class="max-w-7xl mx-auto">© <span id="year"></span> Andamios Buenos Aires</div>
     </footer>
+  </div>
+
+  <!-- Modal para agregar/editar producto -->
+  <div id="modal-producto" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4 border-b-2 border-slate-200 pb-3">
+        <h2 class="text-xl font-bold text-slate-800" id="modal-producto-titulo">Agregar Producto</h2>
+        <button id="modal-producto-cerrar" class="text-slate-500 hover:text-slate-700 text-2xl font-bold">&times;</button>
+      </div>
+      <form id="modal-producto-form" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Código <span class="text-red-500">*</span></label>
+            <input id="modal-producto-codigo" type="text" required class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre <span class="text-red-500">*</span></label>
+            <input id="modal-producto-nombre" type="text" required class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Precio 10 días <span class="text-red-500">*</span></label>
+            <input id="modal-producto-p10" type="number" min="0" step="0.01" required class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Precio 20 días <span class="text-red-500">*</span></label>
+            <input id="modal-producto-p20" type="number" min="0" step="0.01" required class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Precio 30 días <span class="text-red-500">*</span></label>
+            <input id="modal-producto-p30" type="number" min="0" step="0.01" required class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Peso (kg)</label>
+            <input id="modal-producto-peso" type="number" min="0" step="0.01" class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Notas</label>
+            <textarea id="modal-producto-notas" rows="3" class="w-full border-2 border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"></textarea>
+          </div>
+          <div class="col-span-2 flex items-center gap-3">
+            <input id="modal-producto-destacado" type="checkbox" class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+            <label class="text-slate-700 font-medium cursor-pointer">Producto destacado</label>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-4 border-t-2 border-slate-200">
+          <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-md">Guardar</button>
+          <button type="button" id="modal-producto-cancelar" class="flex-1 px-6 py-3 bg-slate-300 text-slate-700 rounded-lg hover:bg-slate-400 transition font-medium">Cancelar</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Firebase compat (sin módulos ES6) -->

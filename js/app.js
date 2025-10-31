@@ -481,17 +481,16 @@ function setupEvents() {
 }
 
 function hydrateSettingsUI() {
-  document.getElementById('set-iva').value = String(state.settings.ivaPct);
-  document.getElementById('set-incluye-iva').checked = !!state.settings.preciosIncluyenIVA;
-  document.getElementById('set-redondeo').checked = !!state.settings.redondeoVisual;
-  document.getElementById('set-validez-def').value = String(state.settings.validezDefaultDays);
+  const setIva = document.getElementById('set-iva'); if (setIva) setIva.value = String(state.settings.ivaPct);
+  const setRed = document.getElementById('set-redondeo'); if (setRed) setRed.checked = !!state.settings.redondeoVisual;
+  const setVal = document.getElementById('set-validez-def'); if (setVal) setVal.value = String(state.settings.validezDefaultDays);
   const sm = document.getElementById('set-minimo'); if (sm) sm.value = String(state.settings.importeMinimo||0);
-  document.getElementById('set-politica').value = state.settings.politicaTarifa;
-  document.getElementById('set-empresa').value = state.settings.empresa.nombre || '';
-  document.getElementById('set-cuit').value = state.settings.empresa.cuit || '';
-  document.getElementById('set-direccion').value = state.settings.empresa.direccion || '';
-  document.getElementById('set-pie').value = state.settings.empresa.piePDF || '';
-  document.getElementById('set-wa').value = state.settings.textoWhatsApp || '';
+  const setPol = document.getElementById('set-politica'); if (setPol) setPol.value = state.settings.politicaTarifa;
+  const setEmp = document.getElementById('set-empresa'); if (setEmp) setEmp.value = state.settings.empresa.nombre || '';
+  const setCuit = document.getElementById('set-cuit'); if (setCuit) setCuit.value = state.settings.empresa.cuit || '';
+  const setDir = document.getElementById('set-direccion'); if (setDir) setDir.value = state.settings.empresa.direccion || '';
+  const setPie = document.getElementById('set-pie'); if (setPie) setPie.value = state.settings.empresa.piePDF || '';
+  const setWa = document.getElementById('set-wa'); if (setWa) setWa.value = state.settings.textoWhatsApp || '';
   const sv = document.getElementById('set-vendedores'); if (sv) sv.value = (state.settings.vendedores||[]).join(', ');
 }
 

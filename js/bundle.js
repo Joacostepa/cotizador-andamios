@@ -556,8 +556,13 @@ function setupTabs() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
   });
+  // Siempre mostrar cotizar por defecto (sin hash)
   const initial = window.location.hash?.replace('#','') || 'cotizar';
   setActiveTab(initial);
+  // Si no hay hash, asegurar que cotizar esté visible
+  if (!window.location.hash) {
+    setActiveTab('cotizar');
+  }
 }
 
 function populateDatalistLocaciones() {
@@ -575,27 +580,45 @@ function populateDatalistLocaciones() {
 
 function renderCotizar() {
   populateDatalistLocaciones();
-  // Fecha de emisión (solo visual)
-  const hoy = new Date().toLocaleDateString();
-  const em = document.getElementById('q-emision'); if (em) em.textContent = hoy;
-  // Validez visual desde configuración
-  const vv = document.getElementById('q-validez-view'); if (vv) vv.textContent = `${state.settings.validezDefaultDays} días`;
   // Vendedores
   const sel = document.getElementById('q-vendedor');
   if (sel) {
     const vendedoresList = state.vendedores?.length ? state.vendedores : (state.settings.vendedores||['-']);
-    console.log('[renderCotizar] Vendedores disponibles:', vendedoresList);
-    console.log('[renderCotizar] state.vendedores:', state.vendedores);
-    console.log('[renderCotizar] state.settings.vendedores:', state.settings.vendedores);
     sel.innerHTML = '<option value="">-- Seleccionar vendedor --</option>' + 
       vendedoresList.map(v=>`<option value="${v}">${v}</option>`).join('');
-    // No establecer valor por defecto, dejar vacío
     if (!sel.value || sel.value === '') {
       sel.value = '';
     }
   }
   // Botones de días
   highlightDiasButtons();
+  // Flete SI/NO (por defecto SI)
+  const fleteSi = document.getElementById('q-flete-si');
+  const fleteNo = document.getElementById('q-flete-no');
+  const fleteContainer = document.getElementById('q-flete-container');
+  if (fleteSi && fleteNo && fleteContainer) {
+    if (!fleteSi.checked && !fleteNo.checked) {
+      fleteSi.checked = true; // Por defecto SI
+    }
+    const updateFleteVisibility = () => {
+      if (fleteSi.checked) {
+        fleteContainer.style.display = 'block';
+      } else {
+        fleteContainer.style.display = 'none';
+        const locInput = document.getElementById('q-locacion');
+        if (locInput) locInput.value = ''; // Limpiar locación si NO
+      }
+      updateResumen();
+    };
+    // Remover listeners previos y agregar nuevos
+    const newFleteSi = fleteSi.cloneNode(true);
+    const newFleteNo = fleteNo.cloneNode(true);
+    fleteSi.parentNode.replaceChild(newFleteSi, fleteSi);
+    fleteNo.parentNode.replaceChild(newFleteNo, fleteNo);
+    newFleteSi.addEventListener('change', updateFleteVisibility);
+    newFleteNo.addEventListener('change', updateFleteVisibility);
+    updateFleteVisibility();
+  }
   // Prefill destacados si vacío
   if (!state.cotizar.items.length) {
     const destacados = state.productos.filter(p=>p.destacado);
@@ -696,9 +719,11 @@ function getFleteForLocacion(loc) {
 
 function updateResumen() {
   const dias = state.cotizar.dias || 10;
-  const loc = document.getElementById('q-locacion').value;
+  const fleteSi = document.getElementById('q-flete-si');
+  const tieneFlete = fleteSi ? fleteSi.checked : true; // Por defecto SI
+  const loc = tieneFlete ? document.getElementById('q-locacion').value : '';
   const descuentoPct = parseNumber(document.getElementById('sum-desc').value) || 0;
-  const flete = getFleteForLocacion(loc);
+  const flete = tieneFlete ? getFleteForLocacion(loc) : 0;
   const aplicarIVA = !!document.getElementById('sum-aplicar-iva')?.checked;
   state.cotizar.aplicarIVA = aplicarIVA;
   const tot = calcularTotales(state, dias, flete, descuentoPct, aplicarIVA);
@@ -716,20 +741,30 @@ async function guardarCotizacion() {
   const now = new Date();
   const numero = (state.seq.cotizacion++);
   const dias = state.cotizar.dias || 10;
-  const loc = document.getElementById('q-locacion').value;
-  const flete = getFleteForLocacion(loc);
+  const fleteSi = document.getElementById('q-flete-si');
+  const tieneFlete = fleteSi ? fleteSi.checked : true;
+  const loc = tieneFlete ? document.getElementById('q-locacion').value : '';
+  const flete = tieneFlete ? getFleteForLocacion(loc) : 0;
   const desc = parseNumber(document.getElementById('sum-desc').value) || 0;
   const aplicarIVA = !!document.getElementById('sum-aplicar-iva')?.checked;
   const tot = calcularTotales(state, dias, flete, desc, aplicarIVA);
   const vendedorInput = document.getElementById('q-vendedor');
   const vendedorValue = vendedorInput ? String(vendedorInput.value || '').trim() : '-';
-  console.log('[guardarCotizacion] Vendedor capturado:', vendedorValue);
+  const clienteInput = document.getElementById('q-cliente');
+  const clienteNombre = clienteInput ? clienteInput.value.trim() : '';
+  if (!clienteNombre) {
+    alert('El nombre del cliente es obligatorio');
+    return;
+  }
+  const telefonoInput = document.getElementById('q-telefono');
+  const telefono = telefonoInput ? telefonoInput.value.trim() : '';
   const cot = {
     id: `C${numero}`,
     numero,
     createdAt: now.toISOString(),
     estado: 'Borrador',
-    cliente: document.getElementById('q-cliente').value.trim(),
+    cliente: clienteNombre,
+    telefono: telefono,
     locacion: loc,
     fechaEmision: now.toISOString().slice(0,10),
     dias,
@@ -1034,9 +1069,24 @@ function onCotizacionAction(e) {
     // Cargar en pantalla Cotizar para editar
     state.cotizar.items = c.items.map(x=>({ ...x }));
     document.getElementById('q-cliente').value = c.cliente || '';
-    document.getElementById('q-locacion').value = c.locacion || '';
+    const telefonoInput = document.getElementById('q-telefono');
+    if (telefonoInput) telefonoInput.value = c.telefono || '';
+    // Configurar flete SI/NO
+    const fleteSi = document.getElementById('q-flete-si');
+    const fleteNo = document.getElementById('q-flete-no');
+    const fleteContainer = document.getElementById('q-flete-container');
+    if (fleteSi && fleteNo && fleteContainer) {
+      if (c.locacion && c.locacion.trim()) {
+        fleteSi.checked = true;
+        fleteContainer.style.display = 'block';
+        document.getElementById('q-locacion').value = c.locacion || '';
+      } else {
+        fleteNo.checked = true;
+        fleteContainer.style.display = 'none';
+        document.getElementById('q-locacion').value = '';
+      }
+    }
     state.cotizar.dias = c.dias || 10; highlightDiasButtons();
-    const vv = document.getElementById('q-validez-view'); if (vv) vv.textContent = `${c.validezDias || state.settings.validezDefaultDays} días`;
     document.getElementById('q-vendedor').value = c.vendedor || '';
     document.getElementById('q-notas').value = c.notas || '';
     setActiveTab('cotizar');
@@ -1081,12 +1131,129 @@ function setupEvents() {
 
   document.getElementById('p-buscar').addEventListener('input', renderProductos);
   document.getElementById('p-guardar').addEventListener('click', guardarTodosProductos);
-  document.getElementById('p-add').addEventListener('click', async ()=>{
-    const p = { codigo: `P${Date.now()%100000}`, nombre: 'Nuevo producto', precio_10: 0, precio_20: 0, precio_30: 0 };
-    state.productos.push(p);
-    await saveToFirestore('productos', p.codigo, p);
+  // Modal para productos
+  let productoEditando = null;
+  const modal = document.getElementById('modal-producto');
+  const modalTitulo = document.getElementById('modal-producto-titulo');
+  const modalCodigo = document.getElementById('modal-producto-codigo');
+  const modalNombre = document.getElementById('modal-producto-nombre');
+  const modalP10 = document.getElementById('modal-producto-p10');
+  const modalP20 = document.getElementById('modal-producto-p20');
+  const modalP30 = document.getElementById('modal-producto-p30');
+  const modalPeso = document.getElementById('modal-producto-peso');
+  const modalNotas = document.getElementById('modal-producto-notas');
+  const modalDestacado = document.getElementById('modal-producto-destacado');
+  const modalForm = document.getElementById('modal-producto-form');
+  
+  const abrirModalProducto = (p = null) => {
+    productoEditando = p;
+    if (p) {
+      modalTitulo.textContent = 'Editar Producto';
+      modalCodigo.value = p.codigo || '';
+      modalNombre.value = p.nombre || '';
+      modalP10.value = p.precio_10 || 0;
+      modalP20.value = p.precio_20 || 0;
+      modalP30.value = p.precio_30 || 0;
+      modalPeso.value = p.peso || '';
+      modalNotas.value = p.notas || '';
+      modalDestacado.checked = !!p.destacado;
+      modalCodigo.disabled = true; // No permitir editar código
+    } else {
+      modalTitulo.textContent = 'Agregar Producto';
+      modalCodigo.value = `P${Date.now()%100000}`;
+      modalNombre.value = '';
+      modalP10.value = 0;
+      modalP20.value = 0;
+      modalP30.value = 0;
+      modalPeso.value = '';
+      modalNotas.value = '';
+      modalDestacado.checked = false;
+      modalCodigo.disabled = false;
+    }
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  };
+  
+  const cerrarModalProducto = () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    productoEditando = null;
+    modalForm.reset();
+  };
+  
+  document.getElementById('modal-producto-cerrar').addEventListener('click', cerrarModalProducto);
+  document.getElementById('modal-producto-cancelar').addEventListener('click', cerrarModalProducto);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) cerrarModalProducto();
+  });
+  
+  modalForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const codigo = modalCodigo.value.trim();
+    const nombre = modalNombre.value.trim();
+    if (!codigo || !nombre) {
+      alert('Código y nombre son obligatorios');
+      return;
+    }
+    const producto = {
+      codigo,
+      nombre,
+      precio_10: parseNumber(modalP10.value) || 0,
+      precio_20: parseNumber(modalP20.value) || 0,
+      precio_30: parseNumber(modalP30.value) || 0,
+      peso: modalPeso.value.trim() ? parseNumber(modalPeso.value) : null,
+      notas: modalNotas.value.trim() || '',
+      destacado: modalDestacado.checked
+    };
+    if (productoEditando) {
+      // Actualizar existente
+      const idx = state.productos.findIndex(p => p.codigo === productoEditando.codigo);
+      if (idx >= 0) {
+        state.productos[idx] = producto;
+      }
+    } else {
+      // Agregar nuevo
+      if (state.productos.some(p => p.codigo === codigo)) {
+        alert('Ya existe un producto con ese código');
+        return;
+      }
+      state.productos.push(producto);
+    }
+    await saveToFirestore('productos', codigo, producto);
+    cerrarModalProducto();
     renderProductos();
   });
+  
+  document.getElementById('p-add').addEventListener('click', () => abrirModalProducto(null));
+  
+  // Agregar listener para botones de editar después de renderProductos
+  const setupEditButtons = () => {
+    const list = document.getElementById('p-list');
+    if (list) {
+      list.querySelectorAll('button[data-act="p-edit"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const idx = Number(btn.getAttribute('data-idx'));
+          const p = state.productos.find((prod, i) => {
+            const filtered = state.productos.filter(p => {
+              const q = document.getElementById('p-buscar').value.trim().toLowerCase();
+              return !q || p.codigo.toLowerCase().includes(q) || p.nombre.toLowerCase().includes(q);
+            });
+            return i === idx;
+          }) || state.productos[idx];
+          if (p) abrirModalProducto(p);
+        });
+      });
+    }
+  };
+  
+  // Monkey patch renderProductos para agregar botones de editar
+  const originalRenderProductos = renderProductos;
+  renderProductos = function() {
+    originalRenderProductos();
+    setTimeout(setupEditButtons, 0);
+  };
   document.getElementById('p-import').addEventListener('click', ()=> document.getElementById('p-file').click());
   document.getElementById('p-file').addEventListener('change', async (e)=>{
     const f = e.target.files[0]; if (!f) return;
