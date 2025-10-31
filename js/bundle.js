@@ -80,8 +80,13 @@ async function loadAllFromFirestore() {
     loadCollectionFromFirestore('cotizaciones'), loadDocFromFirestore('settings','general'),
     loadDocFromFirestore('seq','counters')
   ]);
-  state.productos = productos.map(({ id, ...rest })=> ({ ...rest }));
-  state.fletes = fletes.map(({ id, ...rest })=> ({ ...rest }));
+  // Filtrar documentos marcados como eliminados
+  state.productos = productos
+    .filter(p => !p.__deleted)
+    .map(({ id, ...rest })=> ({ ...rest }));
+  state.fletes = fletes
+    .filter(f => !f.__deleted)
+    .map(({ id, ...rest })=> ({ ...rest }));
   state.cotizaciones = cotizaciones.map(c=> ({ ...c }));
   if (settingsDoc) state.settings = { ...state.settings, ...settingsDoc };
   if (seqDoc) state.seq = { ...state.seq, ...seqDoc };
@@ -599,7 +604,14 @@ function onProductoChange(e) {
   }
   if (act==='p-del') {
     const p = state.productos.splice(idx,1)[0];
-    if (p) saveToFirestore('productos', p.codigo, { __deleted: true });
+    if (p) {
+      // Eliminar físicamente de Firestore
+      try {
+        await _db.collection('productos').doc(p.codigo).delete();
+      } catch (e) {
+        console.error('Error eliminando producto:', e);
+      }
+    }
     renderProductos();
   }
 }
@@ -644,7 +656,14 @@ function onFleteChange(e) {
   }
   if (act==='f-del') {
     const f = state.fletes.splice(idx,1)[0];
-    if (f) saveToFirestore('fletes', f.locacion, { __deleted: true });
+    if (f) {
+      // Eliminar físicamente de Firestore
+      try {
+        await _db.collection('fletes').doc(f.locacion).delete();
+      } catch (e) {
+        console.error('Error eliminando flete:', e);
+      }
+    }
     renderFletes();
     populateDatalistLocaciones();
   }
