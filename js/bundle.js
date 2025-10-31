@@ -788,8 +788,10 @@ async function guardarCotizacion() {
 
 function exportarPDFActual() {
   const dias = state.cotizar.dias || 10;
-  const loc = document.getElementById('q-locacion').value;
-  const flete = getFleteForLocacion(loc);
+  const fleteSi = document.getElementById('q-flete-si');
+  const tieneFlete = fleteSi ? fleteSi.checked : true;
+  const loc = tieneFlete ? document.getElementById('q-locacion').value : '';
+  const flete = tieneFlete ? getFleteForLocacion(loc) : 0;
   const desc = parseNumber(document.getElementById('sum-desc').value) || 0;
   const aplicarIVA = !!document.getElementById('sum-aplicar-iva')?.checked;
   const tot = calcularTotales(state, dias, flete, desc, aplicarIVA);
@@ -809,8 +811,10 @@ function exportarPDFActual() {
 
 function compartirWhatsAppActual() {
   const dias = state.cotizar.dias || 10;
-  const loc = document.getElementById('q-locacion').value;
-  const flete = getFleteForLocacion(loc);
+  const fleteSi = document.getElementById('q-flete-si');
+  const tieneFlete = fleteSi ? fleteSi.checked : true;
+  const loc = tieneFlete ? document.getElementById('q-locacion').value : '';
+  const flete = tieneFlete ? getFleteForLocacion(loc) : 0;
   const desc = parseNumber(document.getElementById('sum-desc').value) || 0;
   const aplicarIVA = !!document.getElementById('sum-aplicar-iva')?.checked;
   const tot = calcularTotales(state, dias, flete, desc, aplicarIVA);
@@ -826,43 +830,39 @@ function compartirWhatsAppActual() {
 function renderProductos() {
   const list = document.getElementById('p-list');
   const q = document.getElementById('p-buscar').value.trim().toLowerCase();
-  const rows = state.productos
+  const filtered = state.productos
     .filter(p => !q || p.codigo.toLowerCase().includes(q) || p.nombre.toLowerCase().includes(q))
-    .sort((a,b)=> a.codigo.localeCompare(b.codigo))
+    .sort((a,b)=> a.codigo.localeCompare(b.codigo));
+  const rows = filtered
     .map((p,idx)=>`
       <tr>
-        <td class="p-2"><input data-idx="${idx}" data-key="codigo" class="w-full border rounded px-2 py-1" value="${p.codigo}"></td>
-        <td class="p-2"><input data-idx="${idx}" data-key="nombre" class="w-full border rounded px-2 py-1" value="${p.nombre}"></td>
-        <td class="p-2 text-right"><input data-idx="${idx}" data-key="precio_10" class="w-full border rounded px-2 py-1 text-right" value="${p.precio_10}"></td>
-        <td class="p-2 text-right"><input data-idx="${idx}" data-key="precio_20" class="w-full border rounded px-2 py-1 text-right" value="${p.precio_20}"></td>
-        <td class="p-2 text-right"><input data-idx="${idx}" data-key="precio_30" class="w-full border rounded px-2 py-1 text-right" value="${p.precio_30}"></td>
-        <td class="p-2 text-right"><input data-idx="${idx}" data-key="peso" class="w-full border rounded px-2 py-1 text-right" value="${p.peso ?? ''}"></td>
-        <td class="p-2"><input data-idx="${idx}" data-key="notas" class="w-full border rounded px-2 py-1" value="${p.notas ?? ''}"></td>
-        <td class="p-2 text-center"><input type="checkbox" data-idx="${idx}" data-key="destacado" ${p.destacado? 'checked':''}></td>
-        <td class="p-2 text-center"><button data-idx="${idx}" data-act="p-del" class="px-2 py-1 text-red-600">🗑️</button></td>
+        <td class="p-3">${p.codigo}</td>
+        <td class="p-3">${p.nombre}</td>
+        <td class="p-3 text-right">${formatARS(p.precio_10)}</td>
+        <td class="p-3 text-right">${formatARS(p.precio_20)}</td>
+        <td class="p-3 text-right">${formatARS(p.precio_30)}</td>
+        <td class="p-3 text-right">${p.peso ? formatARS(p.peso) : '-'}</td>
+        <td class="p-3">${p.notas || '-'}</td>
+        <td class="p-3 text-center">${p.destacado ? '⭐' : '-'}</td>
+        <td class="p-3 text-center flex gap-2 justify-center">
+          <button data-idx="${idx}" data-act="p-edit" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm">Editar</button>
+          <button data-idx="${idx}" data-act="p-del" class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition text-sm">🗑️</button>
+        </td>
       </tr>
     `).join('');
   list.innerHTML = rows || '<tr><td class="p-2 text-slate-500" colspan="9">Sin productos</td></tr>';
-  console.log('[renderProductos] Agregando listeners...', list.querySelectorAll('button[data-act="p-del"]').length, 'botones eliminar encontrados');
-  list.querySelectorAll('input,button').forEach((el, i)=> {
-    const act = el.getAttribute('data-act');
-    const idx = el.getAttribute('data-idx');
-    console.log(`[renderProductos] Elemento ${i}: tag=${el.tagName}, act=${act}, idx=${idx}`);
-    if (act === 'p-del') {
-      // Para botones de eliminar, usar solo click
-      console.log(`[renderProductos] Agregando listener para botón eliminar idx=${idx}`);
-      el.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('[DELETE] 🗑️ Click detectado en botón eliminar!', idx);
-        await onProductoChange(e);
-      }, { once: false, capture: true });
-    } else {
-      el.addEventListener('change', onProductoChange);
-      el.addEventListener('click', onProductoChange);
-    }
+  // Agregar listeners para eliminar
+  list.querySelectorAll('button[data-act="p-del"]').forEach((el) => {
+    el.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const idx = Number(el.getAttribute('data-idx'));
+      const p = filtered[idx];
+      if (p && confirm(`¿Eliminar producto ${p.codigo} - ${p.nombre}?`)) {
+        await onProductoChange({ currentTarget: { getAttribute: () => { const attrs = { 'data-idx': idx.toString(), 'data-act': 'p-del' }; return (k) => attrs[k]; } } } });
+      }
+    });
   });
-  console.log('[renderProductos] Listeners agregados');
 }
 
 async function onProductoChange(e) {
@@ -1235,13 +1235,11 @@ function setupEvents() {
           e.preventDefault();
           e.stopPropagation();
           const idx = Number(btn.getAttribute('data-idx'));
-          const p = state.productos.find((prod, i) => {
-            const filtered = state.productos.filter(p => {
-              const q = document.getElementById('p-buscar').value.trim().toLowerCase();
-              return !q || p.codigo.toLowerCase().includes(q) || p.nombre.toLowerCase().includes(q);
-            });
-            return i === idx;
-          }) || state.productos[idx];
+          const q = document.getElementById('p-buscar').value.trim().toLowerCase();
+          const filtered = state.productos
+            .filter(p => !q || p.codigo.toLowerCase().includes(q) || p.nombre.toLowerCase().includes(q))
+            .sort((a,b)=> a.codigo.localeCompare(b.codigo));
+          const p = filtered[idx];
           if (p) abrirModalProducto(p);
         });
       });
