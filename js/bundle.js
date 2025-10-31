@@ -72,12 +72,25 @@ async function saveToFirestore(collection, docId, payload) {
 async function loadCollectionFromFirestore(collection) {
   if (!_db) return [];
   try {
+    console.log(`[loadCollectionFromFirestore] Cargando colección: ${collection}`);
     const snap = await _db.collection(collection).get();
     const arr = [];
-    snap.forEach(d=> { const data = d.data(); arr.push({ id: d.id, ...data }); });
+    snap.forEach(d=> { 
+      const data = d.data(); 
+      if (collection === 'cotizaciones') {
+        console.log(`[loadCollectionFromFirestore] Cotización ${d.id}:`, {
+          numero: data.numero,
+          vendedor: data.vendedor,
+          estado: data.estado,
+          raw: data
+        });
+      }
+      arr.push({ id: d.id, ...data }); 
+    });
+    console.log(`[loadCollectionFromFirestore] ${collection}: ${arr.length} documentos cargados`);
     return arr;
   } catch (e) {
-    console.error('Error cargando colección:', e);
+    console.error(`[loadCollectionFromFirestore] Error cargando colección ${collection}:`, e);
     return [];
   }
 }
