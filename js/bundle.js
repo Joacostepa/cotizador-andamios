@@ -152,10 +152,17 @@ async function loadAllFromFirestore() {
   });
   state.cotizaciones = cotizaciones.map(c=> ({ ...c }));
   // Vendedores (colección simple con campo "nombre")
+  console.log('[LOAD] Vendedores crudos desde Firestore:', vendedores);
   state.vendedores = (vendedores||[])
-    .map(v => v.nombre || v.id || '')
+    .map(v => {
+      // El documento puede tener campo "nombre" o el ID puede ser el nombre
+      const nombre = v.nombre || v.id || '';
+      console.log('[LOAD] Procesando vendedor:', { id: v.id, nombre: v.nombre, resultado: nombre, raw: v });
+      return nombre;
+    })
     .filter(Boolean)
     .sort((a,b)=> a.localeCompare(b));
+  console.log('[LOAD] Vendedores finales en state:', state.vendedores);
   if (settingsDoc) state.settings = { ...state.settings, ...settingsDoc };
   if (seqDoc) state.seq = { ...state.seq, ...seqDoc };
   console.log('[LOAD] Carga completada. Productos en state:', state.productos.length);
@@ -538,8 +545,18 @@ function renderCotizar() {
   const vv = document.getElementById('q-validez-view'); if (vv) vv.textContent = `${state.settings.validezDefaultDays} días`;
   // Vendedores
   const sel = document.getElementById('q-vendedor');
-  if (sel) sel.innerHTML = (state.vendedores?.length ? state.vendedores : (state.settings.vendedores||['-']))
-    .map(v=>`<option value="${v}">${v}</option>`).join('');
+  if (sel) {
+    const vendedoresList = state.vendedores?.length ? state.vendedores : (state.settings.vendedores||['-']);
+    console.log('[renderCotizar] Vendedores disponibles:', vendedoresList);
+    console.log('[renderCotizar] state.vendedores:', state.vendedores);
+    console.log('[renderCotizar] state.settings.vendedores:', state.settings.vendedores);
+    sel.innerHTML = '<option value="">-- Seleccionar vendedor --</option>' + 
+      vendedoresList.map(v=>`<option value="${v}">${v}</option>`).join('');
+    // No establecer valor por defecto, dejar vacío
+    if (!sel.value || sel.value === '') {
+      sel.value = '';
+    }
+  }
   // Botones de días
   highlightDiasButtons();
   // Prefill destacados si vacío
