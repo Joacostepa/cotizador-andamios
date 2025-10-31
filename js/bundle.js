@@ -642,27 +642,41 @@ function renderProductos() {
     `).join('');
   list.innerHTML = rows || '<tr><td class="p-2 text-slate-500" colspan="9">Sin productos</td></tr>';
   list.querySelectorAll('input,button').forEach(el=>{
-    el.addEventListener('change', onProductoChange);
-    el.addEventListener('click', onProductoChange);
+    if (el.getAttribute('data-act') === 'p-del') {
+      // Para botones de eliminar, usar solo click
+      el.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[DELETE] Click detectado en botón eliminar');
+        await onProductoChange(e);
+      });
+    } else {
+      el.addEventListener('change', onProductoChange);
+      el.addEventListener('click', onProductoChange);
+    }
   });
 }
 
 async function onProductoChange(e) {
+  console.log('[onProductoChange] Función ejecutada, event:', e);
   e.stopPropagation();
   const idx = Number(e.currentTarget.getAttribute('data-idx'));
   const key = e.currentTarget.getAttribute('data-key');
   const act = e.currentTarget.getAttribute('data-act');
-  if (!Number.isNaN(idx) && key) {
-    const p = state.productos[idx];
-    if (!p) return;
-    if (key==='destacado') p.destacado = e.currentTarget.checked;
-    else if (key.startsWith('precio') || key==='peso') p[key] = parseNumber(e.currentTarget.value) || 0;
-    else p[key] = e.currentTarget.value;
-    // Solo actualizar estado, NO guardar ni re-renderizar
-  }
+  console.log('[onProductoChange] idx:', idx, 'key:', key, 'act:', act);
+  
   if (act==='p-del') {
+    console.log('[DELETE] === INICIO ELIMINACIÓN ===');
+    if (Number.isNaN(idx)) {
+      console.error('[DELETE] ❌ Índice inválido:', idx);
+      return;
+    }
+    if (idx >= state.productos.length) {
+      console.error('[DELETE] ❌ Índice fuera de rango. Productos en state:', state.productos.length);
+      return;
+    }
     const p = state.productos.splice(idx,1)[0];
-    console.log('[DELETE] Intentando eliminar producto:', p?.codigo);
+    console.log('[DELETE] Producto a eliminar:', p?.codigo);
     console.log('[DELETE] Productos en state antes:', state.productos.length);
     if (p && _db) {
       // Eliminar físicamente de Firestore
@@ -673,15 +687,32 @@ async function onProductoChange(e) {
         // Verificar que realmente se eliminó
         const verify = await _db.collection('productos').doc(p.codigo).get();
         console.log('[DELETE] Verificación - ¿Existe después de eliminar?', verify.exists);
+        if (verify.exists) {
+          console.error('[DELETE] ⚠️ PRODUCTO SIGUE EXISTIENDO EN FIRESTORE DESPUÉS DE ELIMINAR');
+        }
       } catch (e) {
         console.error('[DELETE] ❌ Error eliminando producto:', e);
-        // Si falla, al menos removemos del estado local
+        console.error('[DELETE] Error completo:', JSON.stringify(e, null, 2));
       }
     } else {
       console.log('[DELETE] ⚠️ No se puede eliminar - p:', !!p, '_db:', !!_db);
     }
     console.log('[DELETE] Productos en state después:', state.productos.length);
+    console.log('[DELETE] === FIN ELIMINACIÓN ===');
     renderProductos();
+    return;
+  }
+  
+  if (!Number.isNaN(idx) && key) {
+    const p = state.productos[idx];
+    if (!p) {
+      console.warn('[onProductoChange] Producto no encontrado en índice:', idx);
+      return;
+    }
+    if (key==='destacado') p.destacado = e.currentTarget.checked;
+    else if (key.startsWith('precio') || key==='peso') p[key] = parseNumber(e.currentTarget.value) || 0;
+    else p[key] = e.currentTarget.value;
+    // Solo actualizar estado, NO guardar ni re-renderizar
   }
 }
 
