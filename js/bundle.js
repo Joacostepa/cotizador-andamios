@@ -123,6 +123,16 @@ async function loadAllFromFirestore() {
       return !f.__deleted;
     })
     .map(({ id, __deleted, ...rest })=> ({ ...rest }));
+  console.log('[LOAD] Cotizaciones cargadas desde Firestore:', cotizaciones.length);
+  cotizaciones.forEach((c, idx) => {
+    console.log(`[LOAD] Cotización ${idx + 1}:`, {
+      numero: c.numero,
+      vendedor: c.vendedor,
+      estado: c.estado,
+      cliente: c.cliente,
+      raw: c
+    });
+  });
   state.cotizaciones = cotizaciones.map(c=> ({ ...c }));
   if (settingsDoc) state.settings = { ...state.settings, ...settingsDoc };
   if (seqDoc) state.seq = { ...state.seq, ...seqDoc };
@@ -835,9 +845,21 @@ function renderCotizaciones() {
     if (orden==='vendedor') return (a.vendedor||'').localeCompare(b.vendedor||'');
     return 0;
   });
+  console.log('[renderCotizaciones] Cotizaciones a renderizar:', arr.length);
+  arr.forEach((c, idx) => {
+    console.log(`[renderCotizaciones] Cotización #${c.numero}:`, {
+      vendedor: c.vendedor,
+      estado: c.estado,
+      cliente: c.cliente,
+      locacion: c.locacion,
+      raw: c
+    });
+  });
+  
   list.innerHTML = arr.map((c,idx)=> {
-    const vendedorValue = String(c.vendedor || '-').trim();
+    const vendedorValue = String(c.vendedor || '').trim() || '-';
     const estadoValue = String(c.estado || 'Borrador').trim();
+    console.log(`[renderCotizaciones] Renderizando cotización #${c.numero}: vendedor="${vendedorValue}", estado="${estadoValue}"`);
     return `
     <tr>
       <td class="p-2">#${c.numero}</td>
