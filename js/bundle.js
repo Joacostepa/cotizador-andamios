@@ -589,7 +589,7 @@ function renderProductos() {
   });
 }
 
-function onProductoChange(e) {
+async function onProductoChange(e) {
   e.stopPropagation();
   const idx = Number(e.currentTarget.getAttribute('data-idx'));
   const key = e.currentTarget.getAttribute('data-key');
@@ -604,12 +604,14 @@ function onProductoChange(e) {
   }
   if (act==='p-del') {
     const p = state.productos.splice(idx,1)[0];
-    if (p) {
+    if (p && _db) {
       // Eliminar físicamente de Firestore
       try {
         await _db.collection('productos').doc(p.codigo).delete();
+        console.log('Producto eliminado:', p.codigo);
       } catch (e) {
         console.error('Error eliminando producto:', e);
+        // Si falla, al menos removemos del estado local
       }
     }
     renderProductos();
@@ -642,7 +644,7 @@ function renderFletes() {
   });
 }
 
-function onFleteChange(e) {
+async function onFleteChange(e) {
   e.stopPropagation();
   const idx = Number(e.currentTarget.getAttribute('data-idx'));
   const key = e.currentTarget.getAttribute('data-key');
@@ -656,12 +658,14 @@ function onFleteChange(e) {
   }
   if (act==='f-del') {
     const f = state.fletes.splice(idx,1)[0];
-    if (f) {
+    if (f && _db) {
       // Eliminar físicamente de Firestore
       try {
         await _db.collection('fletes').doc(f.locacion).delete();
+        console.log('Flete eliminado:', f.locacion);
       } catch (e) {
         console.error('Error eliminando flete:', e);
+        // Si falla, al menos removemos del estado local
       }
     }
     renderFletes();
