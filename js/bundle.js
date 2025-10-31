@@ -357,10 +357,17 @@ function sanitizeProductos(arr) {
 }
 
 function sanitizeFletes(arr) {
-  return (Array.isArray(arr)?arr:[]).map(f=>({
+  console.log('[sanitizeFletes] Input:', arr);
+  const sanitized = (Array.isArray(arr)?arr:[]).map(f=>({
     locacion: String(f.locacion||'').trim(),
     precio: parseNumber(f.precio)
-  })).filter(f=>f.locacion);
+  })).filter(f=>{
+    const valid = !!f.locacion && f.locacion.length > 0;
+    if (!valid) console.warn('[sanitizeFletes] Filtrando flete inválido:', f);
+    return valid;
+  });
+  console.log('[sanitizeFletes] Output:', sanitized);
+  return sanitized;
 }
 
 function importJSONOrCSV(text, tipo) {
@@ -1038,9 +1045,25 @@ function setupEvents() {
   document.getElementById('f-import').addEventListener('click', ()=> document.getElementById('f-file').click());
   document.getElementById('f-file').addEventListener('change', async (e)=>{
     const f = e.target.files[0]; if (!f) return;
+    console.log('[IMPORT] Archivo seleccionado:', f.name, f.size, 'bytes');
     const text = await readFileAsText(f);
-    const { fletes } = importJSONOrCSV(text, 'fletes');
-    if (fletes) { state.fletes = fletes; await Promise.all(fletes.map(x=> saveToFirestore('fletes', x.locacion, x))); renderFletes(); populateDatalistLocaciones(); }
+    console.log('[IMPORT] Contenido leído (primeros 500 chars):', text.substring(0, 500));
+    const result = importJSONOrCSV(text, 'fletes');
+    console.log('[IMPORT] Resultado del parse:', result);
+    const { fletes } = result;
+    if (fletes && Array.isArray(fletes) && fletes.length > 0) {
+      console.log('[IMPORT] Fletes parseados:', fletes.length, fletes);
+      state.fletes = fletes;
+      console.log('[IMPORT] Guardando', fletes.length, 'fletes en Firestore...');
+      await Promise.all(fletes.map(x=> saveToFirestore('fletes', x.locacion, x)));
+      console.log('[IMPORT] Fletes guardados, renderizando...');
+      renderFletes();
+      populateDatalistLocaciones();
+      alert(`✅ Importados ${fletes.length} fletes correctamente`);
+    } else {
+      console.error('[IMPORT] ❌ No se pudieron importar fletes. Resultado:', result);
+      alert(`❌ No se pudieron importar fletes. Verifica el formato del CSV.\n\nFormato esperado:\nlocacion,precio\nBelgrano,15000\nPalermo,18000`);
+    }
     e.target.value = '';
   });
   document.getElementById('f-export-json').addEventListener('click', ()=> exportJSON(state.fletes, 'fletes.json'));
