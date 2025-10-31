@@ -587,26 +587,31 @@ function renderItems() {
   const tbody = document.getElementById('q-items');
   tbody.innerHTML = '';
   const dias = state.cotizar.dias || 10;
+  if (state.cotizar.items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500 font-medium">No hay productos agregados</td></tr>';
+    return;
+  }
   state.cotizar.items.forEach((it, idx) => {
     const prod = state.productos.find(p=>p.codigo===it.codigo);
     const calc = prod ? calcularItem(prod, it.cantidad, dias) : { unitario: 0, subtotal: 0, etiquetaTarifa: it.tarifa };
     const tr = document.createElement('tr');
+    tr.className = 'border-b border-slate-100 hover:bg-slate-50 transition';
     tr.innerHTML = `
-      <td class="p-2">
-        <div class="font-medium">${it.codigo}</div>
-        <div class="text-slate-600">${it.nombre}</div>
+      <td class="p-3">
+        <div class="font-semibold text-slate-800">${it.codigo}</div>
+        <div class="text-sm text-slate-600">${it.nombre}</div>
       </td>
-      <td class="p-2 text-right">
-        <div class="inline-flex items-center gap-1">
-          <button data-idx="${idx}" data-act="dec" class="px-2 py-1 border rounded">-</button>
-          <input data-idx="${idx}" data-act="qty" type="number" min="1" value="${it.cantidad}" class="w-16 border rounded px-2 py-1 text-right">
-          <button data-idx="${idx}" data-act="inc" class="px-2 py-1 border rounded">+</button>
+      <td class="p-3 text-right">
+        <div class="inline-flex items-center gap-2">
+          <button data-idx="${idx}" data-act="dec" class="px-3 py-1.5 border-2 border-slate-300 rounded-lg hover:bg-slate-100 transition font-medium">-</button>
+          <input data-idx="${idx}" data-act="qty" type="number" min="1" value="${it.cantidad}" class="w-20 border-2 border-slate-300 rounded-lg px-2 py-1.5 text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+          <button data-idx="${idx}" data-act="inc" class="px-3 py-1.5 border-2 border-slate-300 rounded-lg hover:bg-slate-100 transition font-medium">+</button>
         </div>
       </td>
-      <td class="p-2 text-center">${calc.etiquetaTarifa}</td>
-      <td class="p-2 text-right">${formatARS(calc.unitario, state.settings.redondeoVisual)}</td>
-      <td class="p-2 text-right">${formatARS(calc.subtotal, state.settings.redondeoVisual)}</td>
-      <td class="p-2 text-center"><button data-idx="${idx}" data-act="del" class="px-2 py-1 text-red-600">🗑️</button></td>
+      <td class="p-3 text-center"><span class="px-2 py-1 bg-blue-100 text-blue-700 rounded font-medium text-xs">${calc.etiquetaTarifa}</span></td>
+      <td class="p-3 text-right font-medium text-slate-800">${formatARS(calc.unitario, state.settings.redondeoVisual)}</td>
+      <td class="p-3 text-right font-semibold text-slate-900">${formatARS(calc.subtotal, state.settings.redondeoVisual)}</td>
+      <td class="p-3 text-center"><button data-idx="${idx}" data-act="del" class="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded transition font-medium">🗑️</button></td>
     `;
     tbody.appendChild(tr);
   });
