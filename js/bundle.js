@@ -859,7 +859,21 @@ function renderProductos() {
       const idx = Number(el.getAttribute('data-idx'));
       const p = filtered[idx];
       if (p && confirm(`¿Eliminar producto ${p.codigo} - ${p.nombre}?`)) {
-        await onProductoChange({ currentTarget: { getAttribute: () => { const attrs = { 'data-idx': idx.toString(), 'data-act': 'p-del' }; return (k) => attrs[k]; } } } });
+        // Buscar el índice real en state.productos
+        const realIdx = state.productos.findIndex(prod => prod.codigo === p.codigo);
+        if (realIdx >= 0) {
+          const fakeEvent = {
+            currentTarget: {
+              getAttribute: (k) => {
+                if (k === 'data-idx') return realIdx.toString();
+                if (k === 'data-act') return 'p-del';
+                return null;
+              }
+            },
+            stopPropagation: () => {}
+          };
+          await onProductoChange(fakeEvent);
+        }
       }
     });
   });
