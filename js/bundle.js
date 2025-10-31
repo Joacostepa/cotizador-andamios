@@ -578,6 +578,9 @@ async function guardarCotizacion() {
   const desc = parseNumber(document.getElementById('sum-desc').value) || 0;
   const aplicarIVA = !!document.getElementById('sum-aplicar-iva')?.checked;
   const tot = calcularTotales(state, dias, flete, desc, aplicarIVA);
+  const vendedorInput = document.getElementById('q-vendedor');
+  const vendedorValue = vendedorInput ? String(vendedorInput.value || '').trim() : '-';
+  console.log('[guardarCotizacion] Vendedor capturado:', vendedorValue);
   const cot = {
     id: `C${numero}`,
     numero,
@@ -589,7 +592,7 @@ async function guardarCotizacion() {
     dias,
     validezDias: state.settings.validezDefaultDays,
     aplicarIVA,
-    vendedor: document.getElementById('q-vendedor').value,
+    vendedor: vendedorValue,
     items: state.cotizar.items.map(x=>({ ...x })),
     notas: document.getElementById('q-notas').value,
     descuentoPct: desc,
@@ -597,6 +600,7 @@ async function guardarCotizacion() {
     flete,
     totales: tot
   };
+  console.log('[guardarCotizacion] Cotización a guardar:', JSON.stringify(cot, null, 2));
   state.cotizaciones.push(cot);
   await saveToFirestore('cotizaciones', cot.id, cot);
   await saveToFirestore('seq','counters', state.seq);
@@ -831,15 +835,18 @@ function renderCotizaciones() {
     if (orden==='vendedor') return (a.vendedor||'').localeCompare(b.vendedor||'');
     return 0;
   });
-  list.innerHTML = arr.map((c,idx)=>`
+  list.innerHTML = arr.map((c,idx)=> {
+    const vendedorValue = String(c.vendedor || '-').trim();
+    const estadoValue = String(c.estado || 'Borrador').trim();
+    return `
     <tr>
       <td class="p-2">#${c.numero}</td>
       <td class="p-2">${new Date(c.createdAt).toLocaleDateString()}</td>
       <td class="p-2">${c.cliente||'-'}</td>
       <td class="p-2">${c.locacion||'-'}</td>
-      <td class="p-2">${c.vendedor||'-'}</td>
-      <td class="p-2"><span class="px-2 py-1 rounded text-xs border">${c.estado}</span></td>
-      <td class="p-2 text-right">${formatARS(c.totales.totalFinal, state.settings.redondeoVisual)}</td>
+      <td class="p-2">${vendedorValue}</td>
+      <td class="p-2"><span class="px-2 py-1 rounded text-xs border">${estadoValue}</span></td>
+      <td class="p-2 text-right">${formatARS((c.totales?.totalFinal || c.totales?.total || 0), state.settings.redondeoVisual)}</td>
       <td class="p-2 text-center flex gap-2 justify-center">
         <button data-idx="${idx}" data-act="c-ver" class="px-2 py-1 border rounded">Ver/Editar</button>
         <button data-idx="${idx}" data-act="c-dup" class="px-2 py-1 border rounded">Duplicar</button>
@@ -847,7 +854,8 @@ function renderCotizaciones() {
         <button data-idx="${idx}" data-act="c-wa" class="px-2 py-1 border rounded">WhatsApp</button>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
   list.querySelectorAll('button').forEach(b=> b.addEventListener('click', onCotizacionAction));
 
   // KPIs
