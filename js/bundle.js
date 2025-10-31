@@ -74,36 +74,63 @@ async function loadDocFromFirestore(collection, docId) {
 }
 
 async function loadAllFromFirestore() {
-  if (!_db) return false;
+  if (!_db) {
+    console.log('[LOAD] No hay conexión a Firestore');
+    return false;
+  }
+  console.log('[LOAD] Iniciando carga de datos desde Firestore...');
   const [productos, fletes, cotizaciones, settingsDoc, seqDoc] = await Promise.all([
     loadCollectionFromFirestore('productos'), loadCollectionFromFirestore('fletes'),
     loadCollectionFromFirestore('cotizaciones'), loadDocFromFirestore('settings','general'),
     loadDocFromFirestore('seq','counters')
   ]);
+  console.log('[LOAD] Productos cargados desde Firestore:', productos.length);
+  console.log('[LOAD] Productos crudos:', productos);
   // Filtrar documentos marcados como eliminados
-  state.productos = productos
-    .filter(p => !p.__deleted)
-    .map(({ id, ...rest })=> ({ ...rest }));
+  const productosFiltrados = productos
+    .filter(p => {
+      const deleted = p.__deleted;
+      if (deleted) console.log('[LOAD] Producto marcado como eliminado, filtrando:', p.codigo || p.id);
+      return !deleted;
+    })
+    .map(({ id, __deleted, ...rest })=> ({ ...rest }));
+  console.log('[LOAD] Productos después de filtrar eliminados:', productosFiltrados.length);
+  console.log('[LOAD] Productos finales:', productosFiltrados);
+  state.productos = productosFiltrados;
   state.fletes = fletes
-    .filter(f => !f.__deleted)
-    .map(({ id, ...rest })=> ({ ...rest }));
+    .filter(f => {
+      if (f.__deleted) console.log('[LOAD] Flete marcado como eliminado, filtrando:', f.locacion || f.id);
+      return !f.__deleted;
+    })
+    .map(({ id, __deleted, ...rest })=> ({ ...rest }));
   state.cotizaciones = cotizaciones.map(c=> ({ ...c }));
   if (settingsDoc) state.settings = { ...state.settings, ...settingsDoc };
   if (seqDoc) state.seq = { ...state.seq, ...seqDoc };
+  console.log('[LOAD] Carga completada. Productos en state:', state.productos.length);
   return true;
 }
 
 async function ensureSeedDataInFirestore() {
-  if (!_db) return;
+  if (!_db) {
+    console.log('[SEED] No hay conexión a Firestore');
+    return;
+  }
+  console.log('[SEED] Verificando si se necesitan datos semilla...');
   // Solo agregar datos semilla si la colección está completamente vacía (primera vez)
   // NO agregar si el usuario ha eliminado productos
   const productosSnapshot = await _db.collection('productos').get();
   const fletesSnapshot = await _db.collection('fletes').get();
   
+  console.log('[SEED] Productos en Firestore:', productosSnapshot.size, '(empty:', productosSnapshot.empty, ')');
+  console.log('[SEED] Productos en state:', (state.productos||[]).length);
+  console.log('[SEED] Fletes en Firestore:', fletesSnapshot.size, '(empty:', fletesSnapshot.empty, ')');
+  console.log('[SEED] Fletes en state:', (state.fletes||[]).length);
+  
   const ops = [];
   
   // Solo agregar productos semilla si la colección está vacía
   if (productosSnapshot.empty && (state.productos||[]).length===0) {
+    console.log('[SEED] ✅ Agregando productos semilla (colección vacía)');
     const seedP = [
       { codigo: 'A001', nombre: 'Marco andamio 2m', precio_10: 12000, precio_20: 20000, precio_30: 26000, destacado: true },
       { codigo: 'A002', nombre: 'Escalera interna', precio_10: 9000, precio_20: 15000, precio_30: 20000, destacado: true },
@@ -111,10 +138,13 @@ async function ensureSeedDataInFirestore() {
     ];
     state.productos = seedP;
     ops.push(...seedP.map(p=> saveToFirestore('productos', p.codigo, p)));
+  } else {
+    console.log('[SEED] ❌ NO se agregan productos semilla - colección no vacía o state tiene productos');
   }
   
   // Solo agregar fletes semilla si la colección está vacía
   if (fletesSnapshot.empty && (state.fletes||[]).length===0) {
+    console.log('[SEED] ✅ Agregando fletes semilla (colección vacía)');
     const seedF = [
       { locacion: 'Belgrano', precio: 15000 },
       { locacion: 'Palermo', precio: 18000 },
@@ -122,17 +152,31 @@ async function ensureSeedDataInFirestore() {
     ];
     state.fletes = seedF;
     ops.push(...seedF.map(f=> saveToFirestore('fletes', f.locacion, f)));
+  } else {
+    console.log('[SEED] ❌ NO se agregan fletes semilla - colección no vacía o state tiene fletes');
   }
   
-  if (ops.length) await Promise.all(ops);
+  if (ops.length) {
+    console.log('[SEED] Guardando', ops.length, 'documentos semilla...');
+    await Promise.all(ops);
+    console.log('[SEED] Datos semilla guardados');
+  }
   
   // Solo guardar settings si no existen
   const settingsDoc = await loadDocFromFirestore('settings','general');
-  if (!settingsDoc) await saveToFirestore('settings','general', state.settings);
+  if (!settingsDoc) {
+    console.log('[SEED] Agregando settings por defecto');
+    await saveToFirestore('settings','general', state.settings);
+  }
   
   // Solo guardar seq si no existe
   const seqDoc = await loadDocFromFirestore('seq','counters');
-  if (!seqDoc) await saveToFirestore('seq','counters', state.seq);
+  if (!seqDoc) {
+    console.log('[SEED] Agregando seq por defecto');
+    await saveToFirestore('seq','counters', state.seq);
+  }
+  
+  console.log('[SEED] Verificación completada');
 }
 
 // Utils
@@ -618,16 +662,25 @@ async function onProductoChange(e) {
   }
   if (act==='p-del') {
     const p = state.productos.splice(idx,1)[0];
+    console.log('[DELETE] Intentando eliminar producto:', p?.codigo);
+    console.log('[DELETE] Productos en state antes:', state.productos.length);
     if (p && _db) {
       // Eliminar físicamente de Firestore
       try {
+        console.log('[DELETE] Eliminando de Firestore...');
         await _db.collection('productos').doc(p.codigo).delete();
-        console.log('Producto eliminado:', p.codigo);
+        console.log('[DELETE] ✅ Producto eliminado de Firestore:', p.codigo);
+        // Verificar que realmente se eliminó
+        const verify = await _db.collection('productos').doc(p.codigo).get();
+        console.log('[DELETE] Verificación - ¿Existe después de eliminar?', verify.exists);
       } catch (e) {
-        console.error('Error eliminando producto:', e);
+        console.error('[DELETE] ❌ Error eliminando producto:', e);
         // Si falla, al menos removemos del estado local
       }
+    } else {
+      console.log('[DELETE] ⚠️ No se puede eliminar - p:', !!p, '_db:', !!_db);
     }
+    console.log('[DELETE] Productos en state después:', state.productos.length);
     renderProductos();
   }
 }
@@ -882,12 +935,24 @@ function hydrateSettingsUI() {
 }
 
 async function main() {
+  console.log('[MAIN] Iniciando aplicación...');
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
   initState();
+  console.log('[MAIN] Estado inicializado');
   await initBackend();
+  console.log('[MAIN] Backend inicializado, Firestore habilitado:', isFirestoreEnabled());
   if (!isFirestoreEnabled()) { alert('Configurar Firebase en config/firebase.js para usar la app (cloud-only)'); return; }
-  try { await loadAllFromFirestore(); await ensureSeedDataInFirestore(); } catch (e) { console.error('Error cargando datos:', e); }
+  try {
+    console.log('[MAIN] Cargando datos...');
+    await loadAllFromFirestore();
+    console.log('[MAIN] Datos cargados, verificando semillas...');
+    await ensureSeedDataInFirestore();
+    console.log('[MAIN] Productos finales en state:', state.productos.length);
+    console.log('[MAIN] Productos finales:', state.productos);
+  } catch (e) {
+    console.error('[MAIN] ❌ Error cargando datos:', e);
+  }
   setupTabs();
   setupEvents();
   hydrateSettingsUI();
@@ -895,6 +960,7 @@ async function main() {
   renderProductos();
   renderFletes();
   renderCotizaciones();
+  console.log('[MAIN] Aplicación inicializada');
 }
 
 main();
