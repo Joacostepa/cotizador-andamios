@@ -160,16 +160,38 @@ async function loadAllFromFirestore() {
   state.cotizaciones = cotizaciones.map(c=> ({ ...c }));
   // Vendedores (colección simple con campo "nombre")
   console.log('[LOAD] Vendedores crudos desde Firestore:', vendedores);
-  state.vendedores = (vendedores||[])
+  const vendedoresDesdeColeccion = (vendedores||[])
     .map(v => {
       // El documento puede tener campo "nombre" o el ID puede ser el nombre
       const nombre = v.nombre || v.id || '';
       console.log('[LOAD] Procesando vendedor:', { id: v.id, nombre: v.nombre, resultado: nombre, raw: v });
       return nombre;
     })
-    .filter(Boolean)
+    .filter(Boolean);
+  
+  // También extraer vendedores únicos de las cotizaciones existentes
+  const vendedoresDesdeCotizaciones = [...new Set(
+    cotizaciones
+      .map(c => c.vendedor)
+      .filter(v => v && v.trim() && v !== '-')
+      .map(v => v.trim())
+  )];
+  console.log('[LOAD] Vendedores desde cotizaciones:', vendedoresDesdeCotizaciones);
+  
+  // Combinar ambos listados y ordenar
+  const todosVendedores = [...new Set([...vendedoresDesdeColeccion, ...vendedoresDesdeCotizaciones])]
     .sort((a,b)=> a.localeCompare(b));
-  console.log('[LOAD] Vendedores finales en state:', state.vendedores);
+  state.vendedores = todosVendedores;
+  console.log('[LOAD] Vendedores finales combinados:', state.vendedores);
+  
+  // Si hay vendedores en cotizaciones que no están en la colección, guardarlos
+  const vendedoresFaltantes = vendedoresDesdeCotizaciones.filter(v => !vendedoresDesdeColeccion.includes(v));
+  if (vendedoresFaltantes.length > 0) {
+    console.log('[LOAD] Guardando vendedores faltantes en Firestore:', vendedoresFaltantes);
+    Promise.all(vendedoresFaltantes.map(nombre => saveToFirestore('vendedores', nombre, { nombre })))
+      .then(() => console.log('[LOAD] Vendedores faltantes guardados'))
+      .catch(e => console.error('[LOAD] Error guardando vendedores faltantes:', e));
+  }
   if (settingsDoc) state.settings = { ...state.settings, ...settingsDoc };
   if (seqDoc) state.seq = { ...state.seq, ...seqDoc };
   console.log('[LOAD] Carga completada. Productos en state:', state.productos.length);
