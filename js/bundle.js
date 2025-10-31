@@ -95,10 +95,15 @@ async function loadAllFromFirestore() {
 
 async function ensureSeedDataInFirestore() {
   if (!_db) return;
-  const needProductos = (state.productos||[]).length===0;
-  const needFletes = (state.fletes||[]).length===0;
+  // Solo agregar datos semilla si la colección está completamente vacía (primera vez)
+  // NO agregar si el usuario ha eliminado productos
+  const productosSnapshot = await _db.collection('productos').get();
+  const fletesSnapshot = await _db.collection('fletes').get();
+  
   const ops = [];
-  if (needProductos) {
+  
+  // Solo agregar productos semilla si la colección está vacía
+  if (productosSnapshot.empty && (state.productos||[]).length===0) {
     const seedP = [
       { codigo: 'A001', nombre: 'Marco andamio 2m', precio_10: 12000, precio_20: 20000, precio_30: 26000, destacado: true },
       { codigo: 'A002', nombre: 'Escalera interna', precio_10: 9000, precio_20: 15000, precio_30: 20000, destacado: true },
@@ -107,7 +112,9 @@ async function ensureSeedDataInFirestore() {
     state.productos = seedP;
     ops.push(...seedP.map(p=> saveToFirestore('productos', p.codigo, p)));
   }
-  if (needFletes) {
+  
+  // Solo agregar fletes semilla si la colección está vacía
+  if (fletesSnapshot.empty && (state.fletes||[]).length===0) {
     const seedF = [
       { locacion: 'Belgrano', precio: 15000 },
       { locacion: 'Palermo', precio: 18000 },
@@ -116,9 +123,16 @@ async function ensureSeedDataInFirestore() {
     state.fletes = seedF;
     ops.push(...seedF.map(f=> saveToFirestore('fletes', f.locacion, f)));
   }
+  
   if (ops.length) await Promise.all(ops);
-  await saveToFirestore('settings','general', state.settings);
-  await saveToFirestore('seq','counters', state.seq);
+  
+  // Solo guardar settings si no existen
+  const settingsDoc = await loadDocFromFirestore('settings','general');
+  if (!settingsDoc) await saveToFirestore('settings','general', state.settings);
+  
+  // Solo guardar seq si no existe
+  const seqDoc = await loadDocFromFirestore('seq','counters');
+  if (!seqDoc) await saveToFirestore('seq','counters', state.seq);
 }
 
 // Utils
