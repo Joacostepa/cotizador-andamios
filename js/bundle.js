@@ -818,8 +818,8 @@ function renderCotizaciones() {
     arr = arr.filter(c =>
       String(c.numero).includes(q) ||
       (c.cliente||'').toLowerCase().includes(q) ||
-      (c.cliente||'').toLowerCase().includes(q) ||
-      (c.locacion||'').toLowerCase().includes(q)
+      (c.locacion||'').toLowerCase().includes(q) ||
+      (c.vendedor||'').toLowerCase().includes(q)
     );
   }
   arr.sort((a,b)=>{
