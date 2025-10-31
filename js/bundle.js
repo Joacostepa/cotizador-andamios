@@ -825,9 +825,10 @@ function renderCotizaciones() {
   arr.sort((a,b)=>{
     if (orden==='fecha_desc') return b.createdAt.localeCompare(a.createdAt);
     if (orden==='numero') return a.numero - b.numero;
-    if (orden==='total') return a.totales.total - b.totales.total;
+    if (orden==='total') return a.totales.totalFinal - b.totales.totalFinal;
     if (orden==='estado') return a.estado.localeCompare(b.estado);
     if (orden==='cliente') return (a.cliente||'').localeCompare(b.cliente||'');
+    if (orden==='vendedor') return (a.vendedor||'').localeCompare(b.vendedor||'');
     return 0;
   });
   list.innerHTML = arr.map((c,idx)=>`
@@ -836,6 +837,7 @@ function renderCotizaciones() {
       <td class="p-2">${new Date(c.createdAt).toLocaleDateString()}</td>
       <td class="p-2">${c.cliente||'-'}</td>
       <td class="p-2">${c.locacion||'-'}</td>
+      <td class="p-2">${c.vendedor||'-'}</td>
       <td class="p-2"><span class="px-2 py-1 rounded text-xs border">${c.estado}</span></td>
       <td class="p-2 text-right">${formatARS(c.totales.totalFinal, state.settings.redondeoVisual)}</td>
       <td class="p-2 text-center flex gap-2 justify-center">
