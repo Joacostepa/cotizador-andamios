@@ -494,11 +494,17 @@ async function exportPDF(state, data) {
 
 function setActiveTab(id) {
   document.querySelectorAll('.tab').forEach(e => e.classList.add('hidden'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('border-slate-200','bg-white'));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('border-blue-600','text-blue-600','font-semibold');
+    b.classList.add('border-transparent','text-slate-600');
+  });
   const tab = document.getElementById(`tab-${id}`);
   const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
   if (tab) tab.classList.remove('hidden');
-  if (btn) btn.classList.add('border-slate-200','bg-white');
+  if (btn) {
+    btn.classList.remove('border-transparent','text-slate-600');
+    btn.classList.add('border-blue-600','text-blue-600','font-semibold');
+  }
   window.location.hash = id;
 }
 
@@ -1144,8 +1150,12 @@ function highlightDiasButtons() {
   [['q-d10',10],['q-d20',20],['q-d30',30]].forEach(([id,val])=>{
     const el = document.getElementById(id);
     if (!el) return;
-    el.classList.remove('bg-white','bg-brand','text-white');
-    if (val===d) { el.classList.add('bg-brand','text-white'); } else { el.classList.add('bg-white'); }
+    el.classList.remove('bg-blue-600','bg-white','text-white','text-slate-700','border-blue-500','border-slate-300');
+    if (val===d) { 
+      el.classList.add('bg-blue-600','text-white','border-blue-600','shadow-md');
+    } else { 
+      el.classList.add('bg-white','text-slate-700','border-slate-300');
+    }
   });
 }
 
