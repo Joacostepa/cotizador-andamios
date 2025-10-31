@@ -1,8 +1,29 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permitir lectura/escritura sin autenticación por ahora (cambiar en producción)
+    // Permitir lectura/escritura/eliminación sin autenticación por ahora (cambiar en producción)
     match /{document=**} {
+      allow read, write, delete: if true;
+    }
+    
+    // Reglas específicas por colección
+    match /productos/{productoId} {
+      allow read, write, delete: if true;
+    }
+    
+    match /fletes/{fleteId} {
+      allow read, write, delete: if true;
+    }
+    
+    match /cotizaciones/{cotizacionId} {
+      allow read, write, delete: if true;
+    }
+    
+    match /settings/{document=**} {
+      allow read, write: if true;
+    }
+    
+    match /seq/{document=**} {
       allow read, write: if true;
     }
   }

@@ -25,7 +25,13 @@ function isFirestoreEnabled() { return !!_db; }
 
 async function initBackend() {
   try {
-    if (!window.firebase) { _db = null; _fb = null; return; }
+    if (!window.firebase) { 
+      console.error('[INIT] Firebase no está disponible en window.firebase');
+      _db = null; 
+      _fb = null; 
+      return; 
+    }
+    console.log('[INIT] Firebase encontrado, inicializando...');
     const firebaseConfig = {
       apiKey: "AIzaSyAKPX1KkUrriULooGwdi3L2g6zBO43TFfw",
       authDomain: "cotizador-andamios.firebaseapp.com",
@@ -37,7 +43,21 @@ async function initBackend() {
     const app = firebase.initializeApp(firebaseConfig);
     _db = firebase.firestore();
     _fb = null;
-  } catch (e) { _db = null; _fb = null; }
+    console.log('[INIT] ✅ Firestore inicializado correctamente');
+    console.log('[INIT] Firestore DB:', _db);
+    
+    // Test de conexión
+    try {
+      const testDoc = await _db.collection('productos').limit(1).get();
+      console.log('[INIT] ✅ Test de conexión exitoso. Documentos encontrados:', testDoc.size);
+    } catch (testErr) {
+      console.error('[INIT] ❌ Error en test de conexión:', testErr);
+    }
+  } catch (e) { 
+    console.error('[INIT] ❌ Error inicializando Firebase:', e);
+    _db = null; 
+    _fb = null; 
+  }
 }
 
 async function saveToFirestore(collection, docId, payload) {
