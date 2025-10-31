@@ -641,20 +641,26 @@ function renderProductos() {
       </tr>
     `).join('');
   list.innerHTML = rows || '<tr><td class="p-2 text-slate-500" colspan="9">Sin productos</td></tr>';
-  list.querySelectorAll('input,button').forEach(el=>{
-    if (el.getAttribute('data-act') === 'p-del') {
+  console.log('[renderProductos] Agregando listeners...', list.querySelectorAll('button[data-act="p-del"]').length, 'botones eliminar encontrados');
+  list.querySelectorAll('input,button').forEach((el, i)=> {
+    const act = el.getAttribute('data-act');
+    const idx = el.getAttribute('data-idx');
+    console.log(`[renderProductos] Elemento ${i}: tag=${el.tagName}, act=${act}, idx=${idx}`);
+    if (act === 'p-del') {
       // Para botones de eliminar, usar solo click
+      console.log(`[renderProductos] Agregando listener para botón eliminar idx=${idx}`);
       el.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('[DELETE] Click detectado en botón eliminar');
+        console.log('[DELETE] 🗑️ Click detectado en botón eliminar!', idx);
         await onProductoChange(e);
-      });
+      }, { once: false, capture: true });
     } else {
       el.addEventListener('change', onProductoChange);
       el.addEventListener('click', onProductoChange);
     }
   });
+  console.log('[renderProductos] Listeners agregados');
 }
 
 async function onProductoChange(e) {
